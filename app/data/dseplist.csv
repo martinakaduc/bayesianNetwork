@@ -1,0 +1,13 @@
+,separators,source,target
+0,[],B,E
+1,"['A', 'E', 'MC']",B,JC
+2,"['A', 'E', 'JC']",B,MC
+3,[],E,B
+4,"['A', 'B', 'MC']",E,JC
+5,"['A', 'B', 'JC']",E,MC
+6,"['A', 'MC']",JC,B
+7,"['A', 'MC']",JC,E
+8,"['A', 'B', 'E']",JC,MC
+9,"['A', 'JC']",MC,B
+10,"['A', 'JC']",MC,E
+11,"['A', 'B', 'E']",MC,JC
