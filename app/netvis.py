@@ -16,6 +16,7 @@ cpt['MC'] = pd.read_csv('../bayesnetapp/app/data/cpt_MC.csv',index_col=0)
 dseplist = pd.read_csv('../bayesnetapp/app/data/dseplist.csv',index_col=0)
 dseplist.separators = dseplist.separators.apply(literal_eval)
 
+
 @app.route('/')
 @app.route('/index/')
 def index():
@@ -29,11 +30,11 @@ def nodedata():
 def linkdata():
     return links.to_json(orient='records')
 
-@app.route('/cptdata/<variable>')
+@app.route('/cptdata/<variable>/')
 def cptdata(variable):
     return cpt[variable].to_json(orient='records')
 
-@app.route('/dsepdata/<source>/<target>')
+@app.route('/dsepdata/<source>/<target>/')
 def dsepdata(source,target):
     return dseplist[(dseplist.source==source) & (dseplist.target==target)].to_json(orient='records')
 
@@ -45,3 +46,8 @@ def navbartest():
 def networkdata():
     netdata = {"nodes":nodes.to_dict(orient='records'),"links":links.to_dict(orient='records')}
     return pd.json.dumps(netdata)
+
+@app.route('/legend/')
+def legend():
+    nodelist = nodes.to_dict(orient='records')
+    return render_template("legend.html", nodes=nodelist)

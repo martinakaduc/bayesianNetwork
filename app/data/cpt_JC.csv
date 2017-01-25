@@ -1,5 +1,5 @@
-,parent1,parent1state,prob,state
-0,A,T,0.9,T
-1,A,T,0.1,F
-2,A,F,0.05,T
-3,A,F,0.95,F
+,parent1,parent1state,state,prob
+0,A,T,T,0.9
+1,A,T,F,0.1
+2,A,F,T,0.05
+3,A,F,F,0.95

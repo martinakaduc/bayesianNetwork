@@ -1,8 +1,21 @@
 {% extends "base.html" %}
 {% block content %}
-    <svg width="1100" height="600" viewBox="0 0 1100 600" preserveAspectRatio="xMidYMid"></svg>
+    <svg width="1100" height="600" viewBox="0 0 1100 600" preserveAspectRatio="xMidYMid" id="networkviz"></svg>
+
+    <div id="myModal" class="modal fade bd-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">CPT for <span id="cpttitle"></span></h5>
+    </div>
+    <div class="modal-body" id="cpttable">
+    </div>
+  </div>
+</div>
 
     <script>
+$(document).ready(function() {
+
 
 var svg = d3.select("svg"),
     width = +svg.attr("width"),
@@ -60,6 +73,7 @@ svg.append("svg:defs").selectAll("marker")
                   .style("font-size", "20px")
                   .attr("class", "label")
                   .attr("fill", "black")
+                  .attr("id", function(d) { return d.id; })
                   .text(function(d) {  return d.id;  });
 
 
@@ -89,6 +103,48 @@ svg.append("svg:defs").selectAll("marker")
             return "translate(" + d.x + "," + d.y + ")";
         });
   }
+
+
+$('.label').click(function() {
+  var variable = $(this).text();
+  $.getJSON('/cptdata/'+variable, function(data){
+
+    $.makeTable = function (mydata) {
+    var table = $('<table class="table table-striped">');
+    $('<thead>').appendTo(table);
+    var tblHeader = "<tr>";
+    for (var k in mydata[0]) tblHeader += "<th>" + k + "</th>";
+    tblHeader += "</tr>";
+    $(tblHeader).appendTo(table);
+    $('</thead>').appendTo(table);
+    $('<tbody>').appendTo(table);
+    $.each(mydata, function (index, value) {
+        var TableRow = "<tr>";
+        $.each(value, function (key, val) {
+            TableRow += "<td>" + val + "</td>";
+        });
+        TableRow += "</tr>";
+        $(table).append(TableRow);
+    });
+    $('</tbody>').appendTo(table);
+    return ($(table));
+  };
+
+    var mydata = eval(data);
+    var table = $.makeTable(mydata);
+    $(table).appendTo("#cpttable");
+
+  });
+
+  $("#cpttitle").text(variable);
+  $("#myModal").modal("show");
+
+});
+
+$("#myModal").on("hidden.bs.modal", function(){
+    $("#cpttable").html("");
+});
+
 });
 
 function dragstarted(d) {
@@ -107,6 +163,11 @@ function dragended(d) {
   d.fx = null;
   d.fy = null;
 }
+
+
+
+
+});
 
 </script>
 {% endblock %}
