@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="form-inline">
+
+  <label for="sel1"><h3>Target:</h3></label>
+  <select class="form-control" id="sel1">
+    {% for node in nodes %}
+    <option>{{ node.id }}</option>
+    {% endfor %}
+  </select>
+
+  <label for="sel2"><h3>Source:</h3></label>
+  <select class="form-control" id="sel2">
+    {% for node in nodes %}
+    <option>{{ node.id }}</option>
+    {% endfor %}
+  </select>
+
+  <button type="submit" class="btn btn-primary" id="dsepbtn">Submit</button>
+</div>
+
+<div id="dsepresult" style="border: solid black 2px; width: 100%; height: 120px; margin-top: 120px; text-align: center; vertical-align: middle;"></div>
+
+<script>
+$(document).ready(function(){
+
+  $('#dsepbtn').click(function(){
+
+    var target = $('#sel1').find(":selected").text();
+    var source = $('#sel2').find(":selected").text();
+    $("#dsepresult").html("");
+
+    if (target == source){
+      $("<h2>Target and source must be different.</h2>").appendTo("#dsepresult");
+    } else {
+      $.getJSON('/dsepdata/'+source+'/'+target, function(data){
+      if (data.length == 0){
+        $("<h2>"+target+" is always dependent on "+source+".</h2>").appendTo("#dsepresult");
+      } else {
+        var seps = data[0].separators;
+        if (seps.length == 0){
+          $("<h2>"+target+" is unconditionally independent of "+source+".</h2>").appendTo("#dsepresult");
+        } else if (seps.length == 1){
+          $("<h2>"+target+" is independent of "+source+" given "+seps[0]+".</h2>").appendTo("#dsepresult");
+        } else if (seps.length == 2){
+          $("<h2>"+target+" is independent of "+source+" given "+seps[0]+" and "+seps[1]+".</h2>").appendTo("#dsepresult");
+        } else {
+          var statement = "<h2>"+target+" is independent of "+source+" given "+seps[0]+",";
+          for(i=1; i < seps.length-1; i++){
+            statement = statement + " " + seps[i] + ",";
+          }
+          statement = statement + " and " + seps[seps.length-1] + ".</h2>";
+          $(statement).appendTo("#dsepresult");
+        }
+      }
+      });
+    }
+
+
+  });
+
+});
+
+</script>
+
+{% endblock %}

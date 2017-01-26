@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="form-inline">
+
+  <label for="sel1"><h3>Output:</h3></label>
+  <select class="form-control" id="sel1">
+    {% for state in states %}
+    <option>{{ state.variable }}</option>
+    {% endfor %}
+  </select>
+
+  <label for="sel2"><h3>Input:</h3></label>
+  <select class="form-control" id="sel2">
+    {% for state in states %}
+    <option>{{ state.variable }}</option>
+    {% endfor %}
+  </select>
+
+  <label for="sel2"><h3>Target state:</h3></label>
+  <select class="form-control" id="sel3">
+  </select>
+
+  <button type="submit" class="btn btn-primary" id="inferbtn">Submit</button>
+</div>
+
+<div id="inferresult" style="width: 100%; margin-top: 120px; text-align: center; vertical-align: middle;"></div>
+
+
+<script>
+
+var input = $('#sel2').find(":selected").text();
+var statelist;
+{% for state in states %}
+  if ("{{state.variable}}" == input){
+    statelist = {{state.states | safe}};
+  }
+{% endfor %}
+
+for (var i=0; i<statelist.length; i++){
+  $("<option>"+statelist[i]+"</option>").appendTo("#sel3");
+}
+
+$('#sel2').on('change', function(){
+  $('#sel3').html("");
+  input = $('#sel2').find(":selected").text();
+  {% for state in states %}
+    if ("{{state.variable}}" == input){
+      statelist = {{state.states | safe}};
+    }
+  {% endfor %}
+  for (var i=0; i<statelist.length; i++){
+    $("<option>"+statelist[i]+"</option>").appendTo("#sel3");
+  }
+});
+
+$('#inferbtn').click(function(){
+  $("#inferresult").html("");
+  var inp = $('#sel2').find(":selected").text();
+  var outp = $('#sel1').find(":selected").text();
+  var stat = $('#sel3').find(":selected").text();
+  if (inp == outp){
+    $("<h2 style='color:red;'>Input and output must be different.</h2>").appendTo("#inferresult");
+  } else {
+    $.ajax({
+      type: "POST",
+      contentType: "application/json; charset=utf-8",
+      url: "/postmethod/",
+      data: JSON.stringify({input: inp, output: outp, state: stat}),
+      success: function(){
+        console.log("woohoo")
+      },
+      dataType: "json"
+    });
+    $.getJSON('/postmethod/',function(data){
+      console.log(data)
+      var table = $('<table class="table table-striped">');
+      $('<thead>').appendTo(table);
+      var tblHeader = "<tr><th><h4>state</h4></th><th><h4>prob</h4></th></tr>";
+      $(tblHeader).appendTo(table);
+      $('</thead>').appendTo(table);
+      $('<tbody>').appendTo(table);
+      for (var key in data){
+        $("<tr><td><h5>"+key+"</h5></td><td><h5>"+data[key]+"</h5></td></tr>").appendTo(table);
+      }
+      $('</tbody></table>').appendTo(table);
+      $(table).appendTo("#inferresult");
+    });
+  }
+
+});
+
+
+
+
+</script>
+
+{% endblock %}

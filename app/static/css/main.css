@@ -53,3 +53,7 @@ body > .container {
   stroke: #fff;
   stroke-width: 1.5px;
 }
+
+.form-inline > * {
+   margin-left:20px;
+}
