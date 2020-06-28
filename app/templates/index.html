@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-    <svg width="1100" height="600" viewBox="0 0 1100 600" preserveAspectRatio="xMidYMid" id="networkviz"></svg>
+    <svg width="1100" height="800" preserveAspectRatio="xMidYMid" id="networkviz"></svg>
 
     <div id="myModal" class="modal fade bd-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
@@ -21,7 +21,7 @@ var svg = d3.select("svg"),
     width = +svg.attr("width"),
     height = +svg.attr("height");
 
-var color = d3.scaleOrdinal(d3.schemeCategory20);
+var color = d3.scaleOrdinal(d3.schemeCategory10);
 
 var simulation = d3.forceSimulation()
     .force("link", d3.forceLink().id(function(d) { return d.id; }).distance(300).strength(1))
@@ -72,7 +72,7 @@ svg.append("svg:defs").selectAll("marker")
                   .style("text-anchor", "middle")
                   .style("font-size", "20px")
                   .attr("class", "label")
-                  .attr("fill", "black")
+                  .attr("fill", "white")
                   .attr("id", function(d) { return d.id; })
                   .text(function(d) {  return d.id;  });
 

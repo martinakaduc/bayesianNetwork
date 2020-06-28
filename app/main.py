@@ -1,0 +1,213 @@
+from app import app
+import pgmpy
+import pandas as pd
+from pgmpy.models import BayesianModel
+from pgmpy.factors.discrete import TabularCPD
+from pgmpy.inference import VariableElimination
+from flask import jsonify, render_template, request, send_file, redirect, url_for
+from ast import literal_eval
+import json
+import numpy as np
+import os
+
+nodes = {}
+nodelist = []
+links = []
+statelist = []
+cpt = {}
+network = BayesianModel()
+resdict = {}
+
+class BayesNode():
+    def __init__(self, name:str, parents, domain, shape, proba):
+        self.target = name
+        self.domain = domain
+        self.parents = list(reversed(parents))
+        self.children = []
+        if isinstance(shape, int):
+            self.shape = [shape]
+        else:
+            self.shape = list(reversed(shape))
+        self.cpd = proba
+        # print(self.cpd)
+
+    def appendChild(self, node):
+        self.children.append(node.target)
+
+def __extract_model(line):
+    parts = line.split(';')
+    node = parts[0]
+    if parts[1] == '':
+        parents = []
+    else:
+        parents = parts[1].split(',')
+    domain = parts[2].split(',')
+    shape = eval(parts[3])
+    probabilities = np.array(eval(parts[4])).reshape(shape)
+    return node, parents, domain, shape, probabilities
+
+
+def read_file(path='app/data', file='model01.txt'):
+    global nodes
+    f = open(path+'/'+file, 'r')
+    N = int(f.readline())
+    lines = f.readlines()
+    for line in lines:
+        node, parents, domain, shape, probabilities = __extract_model(line)
+        nodes[node] = BayesNode(node, parents, domain, shape, probabilities)
+        for p in parents:
+            nodes[p].appendChild(nodes[node])
+    f.close()
+
+# dseplist = pd.read_csv('../bayesnetapp/app/data/dseplist.csv',index_col=0)
+# dseplist.separators = dseplist.separators.apply(literal_eval)
+
+def reset_network():
+    global nodes
+    global nodelist
+    global links
+    global statelist
+    global cpt
+    global network
+
+    nodes = {}
+    nodelist = []
+    links = []
+    statelist = []
+    cpt = {}
+    network = BayesianModel()
+
+def construct_network():
+    global nodes
+    global nodelist
+    global links
+    global statelist
+    global cpt
+    global network
+    global infer
+
+    iter = 0
+    for node, data in nodes.items():
+        for p in data.children:
+            network.add_edge(node, p)
+            links.append({'source':node, 'target':p, 'value':1})
+
+        nodelist.append({'group':iter, 'id':node, 'name':node})
+        statelist.append({'states': data.domain, 'variable':node})
+
+        prob_fla = data.cpd.ravel()
+        tmp = []
+        col_tmp = [node] + data.parents
+        gap = 1
+        for i in range(len(col_tmp)):
+            column = nodes[col_tmp[i]].domain
+            tmp.append(np.array([[x] * gap for x in column] * (int(prob_fla.size) // (gap * data.shape[i]))).flatten())
+            gap *= data.shape[i]
+
+        tmp.append(prob_fla.astype(np.object))
+        tmp = np.column_stack(tmp)
+        # print(tmp)
+
+        cpt[node] = {'prob':tmp[:,-1].tolist(), 'state':tmp[:,0].tolist()}
+        parents_count = tmp.shape[1] - 2
+        if parents_count > 0:
+            for i in range(parents_count):
+                cpt[node]['parent'+str(i+1)] = [data.parents[i]] * tmp.shape[0]
+                cpt[node]['parent'+str(i+1)+'state'] = tmp[:,i+1].tolist()
+
+        nodes[node].cpd = np.moveaxis(data.cpd, -1, 0).reshape((len(data.domain), -1))
+        iter += 1
+
+    for node, data in nodes.items():
+        col_tmp = [node] + data.parents
+        tabular = TabularCPD(variable=data.target, variable_card=len(data.domain), values=nodes[node].cpd,
+                            evidence=data.parents, evidence_card=[len(nodes[x].domain) for x in data.parents],
+                            state_names={x:nodes[x].domain for x in col_tmp})
+        network.add_cpds(tabular)
+
+    assert network.check_model(), "Model CPTs are not consistent."
+    infer = VariableElimination(network)
+
+read_file()
+construct_network()
+
+@app.route('/')
+@app.route('/index/')
+def index():
+    return render_template("index.html")
+
+@app.route('/nodedata/')
+def nodedata():
+    return nodelist
+
+@app.route('/linkdata/')
+def linkdata():
+    return links
+
+@app.route('/cptdata/<variable>/')
+def cptdata(variable):
+    return json.dumps(cpt[variable])
+
+@app.route('/dsepdata/<source>/<target>/')
+def dsepdata(source,target):
+    return dseplist[(dseplist.source==source) & (dseplist.target==target)].to_json(orient='records')
+
+@app.route('/navbartest/')
+def navbartest():
+    return render_template("navbartest.html")
+
+@app.route('/networkdata/')
+def networkdata():
+    netdata = {"nodes":nodelist,"links":links}
+    return json.dumps(netdata)
+
+@app.route('/legend/')
+def legend():
+    return render_template("legend.html", nodes=nodelist)
+
+@app.route('/model/', methods = ['GET'])
+def model():
+    return render_template("model.html", nodes=nodelist)
+
+@app.route('/model/', methods = ['POST'])
+def upload_model():
+    if 'file' not in request.files:
+        flash('No file part')
+        return redirect(request.url)
+    file = request.files['file']
+    # if user does not select file, browser also
+    # submit an empty part without filename
+    if file.filename == '':
+        flash('No selected file')
+        return redirect(request.url)
+    if file:
+        filename = file.filename
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        reset_network()
+        read_file(file=filename)
+        construct_network()
+        return redirect(url_for('index',
+                                filename=filename))
+@app.route('/dseparation/')
+def dseparation():
+    return render_template("dseparation.html", nodes=nodelist)
+
+@app.route('/inference/')
+def inference():
+    return render_template("inference.html", states=statelist)
+
+@app.route('/example_file')
+def example_file():
+    return send_file('data/model01.txt', as_attachment=True)
+
+@app.route('/postmethod/', methods = ['POST','GET'])
+def get_post_javascript_data():
+    if request.method == 'POST':
+        outp = str(request.json['output'])
+        inp = str(request.json['input'])
+        stat = str(request.json['state'])
+        res = infer.query([outp], evidence={inp: stat})
+        print(res)
+        for i in range(0,len(res.values)):
+            resdict[nodes[outp].domain[i]] = round(res.values[i],3)
+    return json.dumps(resdict)

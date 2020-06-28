@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+
+<table class="table table-striped">
+  <h2>MODEL</h2>
+  <p>Choose a model file: <a href='/example_file' method='POST'>Example file</a></p>
+  <form method=post enctype=multipart/form-data>
+    <input type=file name=file>
+    <input type=submit value=Upload>
+  </form>
+  </table>
+
+{% endblock %}
