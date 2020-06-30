@@ -1,97 +1,276 @@
 {% extends "base.html" %}
 {% block content %}
+<form>
+  <div class="form-inline">
 
-<div class="form-inline">
+    <label><h3>Queries:</h3></label>
+    <button type="button" id="add-query-btn">Add query</button>
+  </div>
+  <div id="query-list">
 
-  <label for="sel1"><h3>Output:</h3></label>
-  <select class="form-control" id="sel1">
+    <div style="display: inline-block; padding: 0px 50px">
+      <label for="query-0"><h5>Variable:</h5></label>
+      <select class="form-control" id="query-0">
+        {% for state in states %}
+        <option>{{ state.variable }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="form-inline">
+
+    <label><h3>Evidences:</h3></label>
+    <button type="button" id="add-evidence-btn">Add evidence</button>
+  </div>
+
+  <div id="evidence-list">
+    <!-- <div style="display: inline-block; padding: 0px 50px">
+    <label for="evidence-0"><h5>Variable:</h5></label>
+    <select class="form-control" id="evidence-0">
     {% for state in states %}
     <option>{{ state.variable }}</option>
     {% endfor %}
   </select>
-
-  <label for="sel2"><h3>Input:</h3></label>
-  <select class="form-control" id="sel2">
-    {% for state in states %}
-    <option>{{ state.variable }}</option>
-    {% endfor %}
-  </select>
-
-  <label for="sel2"><h3>Target state:</h3></label>
-  <select class="form-control" id="sel3">
-  </select>
-
-  <button type="submit" class="btn btn-primary" id="inferbtn">Submit</button>
 </div>
 
+<div style="display: inline-block; padding: 0px 50px">
+<label for="evidence-value-0"><h5>State:</h5></label>
+<select class="form-control" id="evidence-value-0">
+</select>
+</div> -->
+
+</div>
+</form>
+<br>
+<button type="submit" class="btn btn-primary" id="inferbtn">Submit</button>
 <div id="inferresult" style="width: 100%; margin-top: 120px; text-align: center; vertical-align: middle;"></div>
 
 
 <script>
 
-var input = $('#sel2').find(":selected").text();
-var statelist;
-{% for state in states %}
-  if ("{{state.variable}}" == input){
-    statelist = {{state.states | safe}};
-  }
-{% endfor %}
 
-for (var i=0; i<statelist.length; i++){
-  $("<option>"+statelist[i]+"</option>").appendTo("#sel3");
+var queries = [];
+var evidences = [];
+var evidence_states = [];
+
+function reset_evidence_value(order) {
+  $('#evidence-value-'+order).html("");
+  var input = $('#evidence-'+order).find(":selected").text();
+
+  {% for state in states %}
+  if ("{{state.variable}}" == input) {
+    var state_list = {{state.states | safe}};
+
+    state_list.forEach((item, i) => {
+      $("<option>"+item+"</option>").appendTo("#evidence-value-"+order);
+    });
+
+  }
+  {% endfor %}
 }
 
-$('#sel2').on('change', function(){
-  $('#sel3').html("");
-  input = $('#sel2').find(":selected").text();
-  {% for state in states %}
-    if ("{{state.variable}}" == input){
-      statelist = {{state.states | safe}};
+function change_evidence(order) {
+  reset_evidence_value(order);
+  var evidence = $('#evidence-'+order).find(":selected").text();
+  evidences.push(evidence);
+  evidence_states.push($('#evidence-value-'+order).find(":selected").text());
+
+  $('#evidence-'+order).on('change', function() {
+    reset_evidence_value(order);
+    evidences[order] = $('#evidence-'+order).find(":selected").text();
+    evidence_states[order] = $('#evidence-value-'+order).find(":selected").text();
+  });
+
+  $('#evidence-value-'+order).on('change', function() {
+    evidences[order] = $('#evidence-'+order).find(":selected").text();
+    evidence_states[order] = $('#evidence-value-'+order).find(":selected").text();
+  });
+}
+
+function change_query(order) {
+  var query = $('#query-'+order).find(":selected").text();
+  queries.push(query);
+
+  $('#query-'+order).on('change', function() {
+    queries[order] = $('#query-'+order).find(":selected").text();
+  });
+}
+
+function find_duplicate_in_array(arra1) {
+  var object = {};
+  var result = [];
+
+  arra1.forEach(function (item) {
+    if(!object[item])
+    object[item] = 0;
+    object[item] += 1;
+  })
+
+  for (var prop in object) {
+    if(object[prop] >= 2) {
+      result.push(prop);
     }
-  {% endfor %}
-  for (var i=0; i<statelist.length; i++){
-    $("<option>"+statelist[i]+"</option>").appendTo("#sel3");
   }
+
+  return result;
+
+}
+
+change_query(0);
+// change_evidence(0);
+
+$('#add-query-btn').click(function(){
+  var query_list = document.getElementById("query-list");
+  var new_query = document.createElement('select');
+  new_query.setAttribute("class", "form-control");
+  new_query.setAttribute("id", "query-"+queries.length);
+
+  var new_query_label = document.createElement('label');
+  new_query_label.setAttribute("for", "query-"+queries.length);
+
+  var label_name = document.createElement("h5");
+  label_name.innerHTML = "Variable:";
+
+  {% for state in states %}
+  var option = document.createElement('option');
+  option.innerHTML = "{{ state.variable }}";
+  new_query.appendChild(option);
+  {% endfor %}
+
+  new_query_label.appendChild(label_name);
+
+  var new_div = document.createElement("div");
+  new_div.setAttribute("style", "display: inline-block; padding: 0px 50px");
+
+  new_div.appendChild(new_query_label);
+  new_div.appendChild(new_query);
+
+  query_list.appendChild(new_div);
+  change_query(queries.length);
+});
+
+$('#add-evidence-btn').click(function(){
+  var evidence_list = document.getElementById("evidence-list");
+  var new_evidence = document.createElement('select');
+  new_evidence.setAttribute("class", "form-control");
+  new_evidence.setAttribute("id", "evidence-"+evidences.length);
+
+  var new_evidence_label = document.createElement('label');
+  new_evidence_label.setAttribute("for", "evidence-"+evidences.length);
+
+  var label_name = document.createElement("h5");
+  label_name.innerHTML = "Variable:";
+
+  new_evidence_label.appendChild(label_name);
+
+  {% for state in states %}
+  var option = document.createElement('option');
+  option.innerHTML = "{{ state.variable }}";
+  new_evidence.appendChild(option);
+  {% endfor %}
+
+  var new_evidence_div = document.createElement("div");
+  new_evidence_div.setAttribute("style", "display: inline-block; padding: 0px 50px");
+
+  new_evidence_div.appendChild(new_evidence_label);
+  new_evidence_div.appendChild(new_evidence);
+
+  //======================================================
+  var new_evidence_value = document.createElement('select');
+  new_evidence_value.setAttribute("class", "form-control");
+  new_evidence_value.setAttribute("id", "evidence-value-"+evidences.length);
+
+  var new_evidence_value_label = document.createElement('label');
+  new_evidence_value_label.setAttribute("for", "evidence-value-"+evidences.length);
+
+  var value_label_name = document.createElement("h5");
+  value_label_name.innerHTML = "State";
+
+  new_evidence_value_label.appendChild(value_label_name);
+
+  var new_evidence_value_div = document.createElement("div");
+  new_evidence_value_div.setAttribute("style", "display: inline-block; padding: 0px 50px");
+
+  new_evidence_value_div.appendChild(new_evidence_value_label);
+  new_evidence_value_div.appendChild(new_evidence_value);
+
+
+  //======================================================
+
+  evidence_list.appendChild(new_evidence_div);
+  evidence_list.appendChild(new_evidence_value_div);
+  evidence_list.appendChild(document.createElement('br'));
+
+  change_evidence(evidences.length);
 });
 
 $('#inferbtn').click(function(){
   $("#inferresult").html("");
-  var inp = $('#sel2').find(":selected").text();
-  var outp = $('#sel1').find(":selected").text();
-  var stat = $('#sel3').find(":selected").text();
-  if (inp == outp){
-    $("<h2 style='color:red;'>Input and output must be different.</h2>").appendTo("#inferresult");
-  } else {
-    $.ajax({
-      type: "POST",
-      contentType: "application/json; charset=utf-8",
-      url: "/postmethod/",
-      data: JSON.stringify({input: inp, output: outp, state: stat}),
-      success: function(){
-        console.log("woohoo")
-      },
-      dataType: "json"
-    });
-    $.getJSON('/postmethod/',function(data){
-      console.log(data)
+
+  var duplicate_query = find_duplicate_in_array(queries);
+  if (duplicate_query.length > 0){
+    $("<h3 style='color:red;'>Error: Duplicate query!</h3>").appendTo("#inferresult");
+    return;
+  }
+
+  var duplicate_evidence = find_duplicate_in_array(evidences);
+  if (duplicate_evidence.length > 0){
+    $("<h3 style='color:red;'>Error: Duplicate evidences!</h3>").appendTo("#inferresult");
+    return;
+  }
+
+  var conflict = queries.filter(e => evidences.indexOf(e) !== -1);
+  if (conflict.length > 0){
+    $("<h3 style='color:red;'>Error: Queries and evidences must be different!</h3>").appendTo("#inferresult");
+    return;
+  }
+
+  console.log(queries);
+  console.log(evidences);
+  console.log(evidence_states);
+
+  $.ajax({
+    type: "POST",
+    contentType: "application/json; charset=utf-8",
+    url: "/postmethod/",
+    data: JSON.stringify({queries: queries, evidences: evidences, evidence_states: evidence_states}),
+    success: function(data) {
+      console.log("Success inference!");
+      console.log(data);
       var table = $('<table class="table table-striped">');
       $('<thead>').appendTo(table);
-      var tblHeader = "<tr><th><h4>state</h4></th><th><h4>prob</h4></th></tr>";
+
+      var tblHeader = "<tr>";
+      data['scope'].forEach((item, i) => {
+        tblHeader += "<th><h4>"+ item +"</h4></th>";
+      });
+      tblHeader += "<th><h4>Prob</h4></th></tr>";
+
       $(tblHeader).appendTo(table);
       $('</thead>').appendTo(table);
       $('<tbody>').appendTo(table);
-      for (var key in data){
-        $("<tr><td><h5>"+key+"</h5></td><td><h5>"+data[key]+"</h5></td></tr>").appendTo(table);
+
+      for (var row in data['value']){
+        val_row = "<tr>";
+
+        for (var col in data['value'][row]) {
+          val_row += "<td><p>"+ data['value'][row][col] +"</p></td>";
+        }
+
+        val_row += "</tr>";
+
+        $(val_row).appendTo(table);
+
       }
+
       $('</tbody></table>').appendTo(table);
       $(table).appendTo("#inferresult");
-    });
-  }
+    },
+    dataType: "json"
+  });
 
 });
-
-
-
 
 </script>
 

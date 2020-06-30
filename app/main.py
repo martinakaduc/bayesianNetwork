@@ -200,14 +200,27 @@ def inference():
 def example_file():
     return send_file('data/model01.txt', as_attachment=True)
 
-@app.route('/postmethod/', methods = ['POST','GET'])
+@app.route('/postmethod/', methods = ['POST'])
 def get_post_javascript_data():
-    if request.method == 'POST':
-        outp = str(request.json['output'])
-        inp = str(request.json['input'])
-        stat = str(request.json['state'])
-        res = infer.query([outp], evidence={inp: stat})
-        print(res)
-        for i in range(0,len(res.values)):
-            resdict[nodes[outp].domain[i]] = round(res.values[i],3)
-    return json.dumps(resdict)
+    queries = request.json['queries']
+    evidences = request.json['evidences']
+    evidence_states = request.json['evidence_states']
+
+    # print(queries)
+    # print({key:val for key,val in zip(evidences, evidence_states)})
+
+    res = infer.query(queries, evidence={key:val for key,val in zip(evidences, evidence_states)}, joint=True)
+    print(res)
+
+    scope = res.scope()
+    cardinality = res.get_cardinality(scope)
+    assignment = res.assignment(list(range(np.product(list(cardinality.values())))))
+    values = res.values.reshape((-1,)).tolist()
+    # print(assignment)
+    # print(values)
+
+    res_row = []
+    for i, row in enumerate(assignment):
+        res_row.append([x[1] for x in row] + [round(values[i], 4)])
+
+    return json.dumps({'scope': scope, 'value': res_row})
