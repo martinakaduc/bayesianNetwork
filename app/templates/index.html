@@ -113,12 +113,13 @@ $('.label').click(function() {
     var table = $('<table class="table table-striped">');
     $('<thead>').appendTo(table);
     var tblHeader = "<tr>";
-    for (var k in mydata[0]) tblHeader += "<th>" + k + "</th>";
-    tblHeader += "</tr>";
+    for (var k in mydata[0]) tblHeader += "<th>" + mydata[0][k] + "</th>";
+    tblHeader += "<th>Prob</th></tr>";
     $(tblHeader).appendTo(table);
     $('</thead>').appendTo(table);
     $('<tbody>').appendTo(table);
-    $.each(mydata, function (index, value) {
+    $.each(mydata.slice(1)[0], function (index, value) {
+      // console.log(index);
         var TableRow = "<tr>";
         $.each(value, function (key, val) {
             TableRow += "<td>" + val + "</td>";

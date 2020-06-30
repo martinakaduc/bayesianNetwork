@@ -1,9 +1,0 @@
-,parent1,parent1state,parent2,parent2state,state,prob
-0,B,T,E,T,T,0.95
-1,B,T,E,T,F,0.05
-2,B,T,E,F,T,0.94
-3,B,T,E,F,F,0.06
-4,B,F,E,T,T,0.29
-5,B,F,E,T,F,0.71
-6,B,F,E,F,T,0.001
-7,B,F,E,F,F,0.999

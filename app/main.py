@@ -108,12 +108,17 @@ def construct_network():
         tmp = np.column_stack(tmp)
         # print(tmp)
 
-        cpt[node] = {'prob':tmp[:,-1].tolist(), 'state':tmp[:,0].tolist()}
-        parents_count = tmp.shape[1] - 2
-        if parents_count > 0:
-            for i in range(parents_count):
-                cpt[node]['parent'+str(i+1)] = [data.parents[i]] * tmp.shape[0]
-                cpt[node]['parent'+str(i+1)+'state'] = tmp[:,i+1].tolist()
+        # parents_count = tmp.shape[1] - 2
+        # if parents_count > 0:
+        #     for i in range(parents_count):
+        #         # cpt[node]['parent'+str(i+1)] = [data.parents[i]] * tmp.shape[0]
+        #         cpt[node].append(tmp[:,i+1].tolist())
+
+        # cpt[node].append(tmp[:,0].tolist())
+        # cpt[node].append(tmp[:,-1].tolist())
+        cpt[node] = []
+        cpt[node].append(col_tmp)
+        cpt[node].append(tmp.tolist())
 
         nodes[node].cpd = np.moveaxis(data.cpd, -1, 0).reshape((len(data.domain), -1))
         iter += 1
@@ -121,8 +126,8 @@ def construct_network():
     for node, data in nodes.items():
         col_tmp = [node] + data.parents
         tabular = TabularCPD(variable=data.target, variable_card=len(data.domain), values=nodes[node].cpd,
-                            evidence=data.parents, evidence_card=[len(nodes[x].domain) for x in data.parents],
-                            state_names={x:nodes[x].domain for x in col_tmp})
+                            evidence=data.parents[::-1], evidence_card=[len(nodes[x].domain) for x in data.parents[::-1]],
+                            state_names={x:nodes[x].domain for x in col_tmp[::-1]})
         network.add_cpds(tabular)
 
     assert network.check_model(), "Model CPTs are not consistent."
@@ -146,6 +151,7 @@ def linkdata():
 
 @app.route('/cptdata/<variable>/')
 def cptdata(variable):
+    # print(cpt[variable])
     return json.dumps(cpt[variable])
 
 @app.route('/dsepdata/<source>/<target>/')
