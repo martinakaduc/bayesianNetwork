@@ -4,6 +4,7 @@ import pandas as pd
 from pgmpy.models import BayesianModel
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference import VariableElimination
+from pgmpy.independencies import Independencies, IndependenceAssertion
 from flask import jsonify, render_template, request, send_file, redirect, url_for
 from ast import literal_eval
 import json
@@ -69,12 +70,14 @@ def reset_network():
     global statelist
     global cpt
     global network
+    global independences
 
     nodes = {}
     nodelist = []
     links = []
     statelist = []
     cpt = {}
+    independences = None
     network = BayesianModel()
 
 def construct_network():
@@ -85,6 +88,7 @@ def construct_network():
     global cpt
     global network
     global infer
+    global independences
 
     iter = 0
     for node, data in nodes.items():
@@ -130,6 +134,9 @@ def construct_network():
                             state_names={x:nodes[x].domain for x in col_tmp[::-1]})
         network.add_cpds(tabular)
 
+    independences = network.get_independencies()
+    # ind = IndependenceAssertion('I', 'D')
+    # print(ind in independences)
     assert network.check_model(), "Model CPTs are not consistent."
     infer = VariableElimination(network)
 
@@ -154,9 +161,11 @@ def cptdata(variable):
     # print(cpt[variable])
     return json.dumps(cpt[variable])
 
-@app.route('/dsepdata/<source>/<target>/')
-def dsepdata(source,target):
-    return dseplist[(dseplist.source==source) & (dseplist.target==target)].to_json(orient='records')
+@app.route('/dsepdata/<source>/<target>/', methods=['POST'])
+def dsepdata(source, target):
+    evidences = request.json['evidences']
+    ind = IndependenceAssertion(source, target, evidences)
+    return json.dumps(ind in independences)
 
 @app.route('/navbartest/')
 def navbartest():

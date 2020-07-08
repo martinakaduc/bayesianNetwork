@@ -16,6 +16,15 @@
     {% endfor %}
   </select>
 
+  <div class="form-inline">
+
+    <label><h3>Evidences:</h3></label>
+    <button type="button" id="add-evidence-btn">Add evidence</button>
+  </div>
+
+  <div id="evidence-list">
+  </div>
+
   <button type="submit" class="btn btn-primary" id="dsepbtn">Submit</button>
 </div>
 
@@ -23,6 +32,71 @@
 
 <script>
 $(document).ready(function(){
+  var evidences = [];
+
+  function change_evidence(order) {
+    var evidence = $('#evidence-'+order).find(":selected").text();
+    evidences.push(evidence);
+
+    $('#evidence-'+order).on('change', function() {
+      evidences[order] = $('#evidence-'+order).find(":selected").text();
+    });
+
+  }
+
+  $('#add-evidence-btn').click(function(){
+    var evidence_list = document.getElementById("evidence-list");
+    var new_evidence = document.createElement('select');
+    new_evidence.setAttribute("class", "form-control");
+    new_evidence.setAttribute("id", "evidence-"+ evidences.length);
+
+    var new_evidence_label = document.createElement('label');
+    new_evidence_label.setAttribute("for", "evidence-"+ evidences.length);
+
+    var label_name = document.createElement("h5");
+    label_name.innerHTML = "Variable:";
+
+    new_evidence_label.appendChild(label_name);
+
+    {% for node in nodes %}
+    var option = document.createElement('option');
+    option.innerHTML = "{{ node.id }}";
+    new_evidence.appendChild(option);
+    {% endfor %}
+
+    var new_evidence_div = document.createElement("div");
+    new_evidence_div.setAttribute("style", "display: inline-block; padding: 0px 50px");
+
+    new_evidence_div.appendChild(new_evidence_label);
+    new_evidence_div.appendChild(new_evidence);
+
+    //======================================================
+
+    evidence_list.appendChild(new_evidence_div);
+    evidence_list.appendChild(document.createElement('br'));
+
+    change_evidence(evidences.length);
+  });
+
+  function find_duplicate_in_array(arra1) {
+    var object = {};
+    var result = [];
+
+    arra1.forEach(function (item) {
+      if(!object[item])
+      object[item] = 0;
+      object[item] += 1;
+    })
+
+    for (var prop in object) {
+      if(object[prop] >= 2) {
+        result.push(prop);
+      }
+    }
+
+    return result;
+
+  }
 
   $('#dsepbtn').click(function(){
 
@@ -31,31 +105,42 @@ $(document).ready(function(){
     $("#dsepresult").html("");
 
     if (target == source){
-      $("<h2>Target and source must be different.</h2>").appendTo("#dsepresult");
-    } else {
-      $.getJSON('/dsepdata/'+source+'/'+target, function(data){
-      if (data.length == 0){
-        $("<h2>"+target+" is always dependent on "+source+".</h2>").appendTo("#dsepresult");
-      } else {
-        var seps = data[0].separators;
-        if (seps.length == 0){
-          $("<h2>"+target+" is unconditionally independent of "+source+".</h2>").appendTo("#dsepresult");
-        } else if (seps.length == 1){
-          $("<h2>"+target+" is independent of "+source+" given "+seps[0]+".</h2>").appendTo("#dsepresult");
-        } else if (seps.length == 2){
-          $("<h2>"+target+" is independent of "+source+" given "+seps[0]+" and "+seps[1]+".</h2>").appendTo("#dsepresult");
-        } else {
-          var statement = "<h2>"+target+" is independent of "+source+" given "+seps[0]+",";
-          for(i=1; i < seps.length-1; i++){
-            statement = statement + " " + seps[i] + ",";
-          }
-          statement = statement + " and " + seps[seps.length-1] + ".</h2>";
-          $(statement).appendTo("#dsepresult");
-        }
-      }
-      });
+      $("<h3 style='color:red;'>Target and source must be different.</h3>").appendTo("#dsepresult");
+      return;
+    }
+    var duplicate_evidence = find_duplicate_in_array(evidences);
+    if (duplicate_evidence.length > 0){
+      $("<h3 style='color:red;'>Error: Duplicate evidences!</h3>").appendTo("#dsepresult");
+      return;
     }
 
+    $.ajax({
+      type: "POST",
+      contentType: "application/json; charset=utf-8",
+      url: '/dsepdata/'+source+'/'+target+'/',
+      data: JSON.stringify({evidences: evidences}),
+      success: function(data) {
+        console.log(data);
+        var status = (data == false) ? "dependent" : "independent";
+        var statement;
+        if (evidences.length == 0) {
+          statement = "<h2>"+target+" is always " + status + " on "+source+".</h2>";
+        } else {
+          statement = "<h2>"+target+" is " + status + " on " + source + " given ";
+          for(var i=0; i < evidences.length-1; i++){
+            statement += evidences[i];
+            if (i < evidences.length-2) {
+              statement += ", ";
+            } else {
+              statement += " and"
+            }
+          }
+          statement += evidences[evidences.length-1] + ".</h2>";
+        }
+         $(statement).appendTo("#dsepresult");
+      },
+      dataType: "json"
+    });
 
   });
 
