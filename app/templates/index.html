@@ -1,174 +1,316 @@
 {% extends "base.html" %}
 {% block content %}
-    <svg width="1100" height="800" preserveAspectRatio="xMidYMid" id="networkviz"></svg>
+<svg width="1100" height="800" preserveAspectRatio="xMidYMid" id="networkviz"></svg>
 
-    <div id="myModal" class="modal fade bd-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">CPT for <span id="cpttitle"></span></h5>
+  <div align="center"><h2> D-Separation </h2></div>
+  <div class="form-inline">
+
+    <label for="sel1"><h3>Target:</h3></label>
+    <select class="form-control" id="sel1">
+      {% for node in nodes %}
+      <option>{{ node.id }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="sel2"><h3>Source:</h3></label>
+    <select class="form-control" id="sel2">
+      {% for node in nodes %}
+      <option>{{ node.id }}</option>
+      {% endfor %}
+    </select>
+
+    <div class="form-inline">
+
+      <label><h3>Evidences:</h3></label>
+      <button type="button" id="add-evidence-btn">Add evidence</button>
     </div>
-    <div class="modal-body" id="cpttable">
+
+    <div id="evidence-list">
     </div>
+
+    <button type="submit" class="btn btn-primary" id="dsepbtn">Submit</button>
   </div>
-</div>
 
-    <script>
-$(document).ready(function() {
+  <div id="dsepresult" style="border: solid black 2px; width: 100%; height: 120px; margin-top: 120px; text-align: center; vertical-align: middle;"></div>
+  <div style="width: 100%; height: 120px; margin-top: 120px; text-align: center; vertical-align: middle;"></div>
+
+  <div id="myModal" class="modal fade bd-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">CPT for <span id="cpttitle"></span></h5>
+        </div>
+        <div class="modal-body" id="cpttable">
+        </div>
+      </div>
+    </div>
+
+  <script>
+  $(document).ready(function() {
 
 
-var svg = d3.select("svg"),
+    var svg = d3.select("svg"),
     width = +svg.attr("width"),
     height = +svg.attr("height");
 
-var color = d3.scaleOrdinal(d3.schemeCategory10);
+    var color = d3.scaleOrdinal(d3.schemeCategory10);
 
-var simulation = d3.forceSimulation()
+    var simulation = d3.forceSimulation()
     .force("link", d3.forceLink().id(function(d) { return d.id; }).distance(300).strength(1))
     .force("charge", d3.forceManyBody())
     .force("center", d3.forceCenter(width / 2, height / 2));
 
 
-d3.json({{url_for('networkdata')}}, function(error, graph) {
-  if (error) throw error;
+    d3.json({{url_for('networkdata')}}, function(error, graph) {
+      if (error) throw error;
 
-  // build the arrow.
-svg.append("svg:defs").selectAll("marker")
-    .data(["end"])      // Different link/path types can be defined here
-  .enter().append("svg:marker")    // This section adds in the arrows
-    .attr("id", String)
-    .attr("refX", 50)
-    .attr("viewBox", "0 -5 10 10")
-    .attr("refY", 0)
-    .attr("markerWidth", 6)
-    .attr("markerHeight", 6)
-    .attr("orient", "auto")
-  .append("svg:path")
-    .attr("d", "M0,-5L10,0L0,5");
+      // build the arrow.
+      svg.append("svg:defs").selectAll("marker")
+      .data(["end"])      // Different link/path types can be defined here
+      .enter().append("svg:marker")    // This section adds in the arrows
+      .attr("id", String)
+      .attr("refX", 50)
+      .attr("viewBox", "0 -5 10 10")
+      .attr("refY", 0)
+      .attr("markerWidth", 6)
+      .attr("markerHeight", 6)
+      .attr("orient", "auto")
+      .append("svg:path")
+      .attr("d", "M0,-5L10,0L0,5");
 
-  var link = svg.append("g")
+      var link = svg.append("g")
       .attr("class", "links")
-    .selectAll("line")
-    .data(graph.links)
-    .enter().append("line")
+      .selectAll("line")
+      .data(graph.links)
+      .enter().append("line")
       .attr("stroke-width", function(d) { return 3*d.value; })
       .attr("marker-end", "url(#end)");
 
-  var node = svg.append("g")
+      var node = svg.append("g")
       .attr("class", "nodes")
-    .selectAll("circle")
-    .data(graph.nodes)
-    .enter().append("circle")
+      .selectAll("circle")
+      .data(graph.nodes)
+      .enter().append("circle")
       .attr("r", 40)
       .attr("fill", function(d) { return color(d.group); })
       .call(d3.drag()
-          .on("start", dragstarted)
-          .on("drag", dragged)
-          .on("end", dragended));
+      .on("start", dragstarted)
+      .on("drag", dragged)
+      .on("end", dragended));
 
-   var texts = svg.selectAll("text.label")
-                  .data(graph.nodes)
-                  .enter().append("text")
-                  .style("text-anchor", "middle")
-                  .style("font-size", "20px")
-                  .attr("class", "label")
-                  .attr("fill", "white")
-                  .attr("id", function(d) { return d.id; })
-                  .text(function(d) {  return d.id;  });
+      var texts = svg.selectAll("text.label")
+      .data(graph.nodes)
+      .enter().append("text")
+      .style("text-anchor", "middle")
+      .style("font-size", "20px")
+      .attr("class", "label")
+      .attr("fill", "white")
+      .attr("id", function(d) { return d.id; })
+      .text(function(d) {  return d.id;  });
 
 
-  node.append("title")
+      node.append("title")
       .text(function(d) { return d.id; });
 
-  simulation
+      simulation
       .nodes(graph.nodes)
       .on("tick", ticked);
 
-  simulation.force("link")
+      simulation.force("link")
       .links(graph.links);
 
-  function ticked() {
-    link
+      function ticked() {
+        link
         .attr("x1", function(d) { return d.source.x; })
         .attr("y1", function(d) { return d.source.y; })
         .attr("x2", function(d) { return d.target.x; })
         .attr("y2", function(d) { return d.target.y; });
 
-    node
+        node
         .attr("cx", function(d) { return d.x; })
         .attr("cy", function(d) { return d.y; });
 
-    texts
-         .attr("transform", function(d) {
-            return "translate(" + d.x + "," + d.y + ")";
+        texts
+        .attr("transform", function(d) {
+          return "translate(" + d.x + "," + d.y + ")";
         });
-  }
+      }
 
 
-$('.label').click(function() {
-  var variable = $(this).text();
-  $.getJSON('/cptdata/'+variable, function(data){
+      $('.label').click(function() {
+        var variable = $(this).text();
+        $.getJSON('/cptdata/'+variable, function(data){
 
-    $.makeTable = function (mydata) {
-    var table = $('<table class="table table-striped">');
-    $('<thead>').appendTo(table);
-    var tblHeader = "<tr>";
-    for (var k in mydata[0]) tblHeader += "<th>" + mydata[0][k] + "</th>";
-    tblHeader += "<th>Prob</th></tr>";
-    $(tblHeader).appendTo(table);
-    $('</thead>').appendTo(table);
-    $('<tbody>').appendTo(table);
-    $.each(mydata.slice(1)[0], function (index, value) {
-      // console.log(index);
-        var TableRow = "<tr>";
-        $.each(value, function (key, val) {
-            TableRow += "<td>" + val + "</td>";
+          $.makeTable = function (mydata) {
+            var table = $('<table class="table table-striped">');
+            $('<thead>').appendTo(table);
+            var tblHeader = "<tr>";
+            for (var k in mydata[0]) tblHeader += "<th>" + mydata[0][k] + "</th>";
+            tblHeader += "<th>Prob</th></tr>";
+            $(tblHeader).appendTo(table);
+            $('</thead>').appendTo(table);
+            $('<tbody>').appendTo(table);
+            $.each(mydata.slice(1)[0], function (index, value) {
+              // console.log(index);
+              var TableRow = "<tr>";
+              $.each(value, function (key, val) {
+                TableRow += "<td>" + val + "</td>";
+              });
+              TableRow += "</tr>";
+              $(table).append(TableRow);
+            });
+            $('</tbody></table>').appendTo(table);
+            return ($(table));
+          };
+
+          var mydata = eval(data);
+          var table = $.makeTable(mydata);
+          $(table).appendTo("#cpttable");
+
         });
-        TableRow += "</tr>";
-        $(table).append(TableRow);
+
+        $("#cpttitle").text(variable);
+        $("#myModal").modal("show");
+
+      });
+
+      $("#myModal").on("hidden.bs.modal", function(){
+        $("#cpttable").html("");
+      });
+
     });
-    $('</tbody></table>').appendTo(table);
-    return ($(table));
-  };
 
-    var mydata = eval(data);
-    var table = $.makeTable(mydata);
-    $(table).appendTo("#cpttable");
+    function dragstarted(d) {
+      if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+      d.fx = d.x;
+      d.fy = d.y;
+    }
 
+    function dragged(d) {
+      d.fx = d3.event.x;
+      d.fy = d3.event.y;
+    }
+
+    function dragended(d) {
+      if (!d3.event.active) simulation.alphaTarget(0);
+      d.fx = null;
+      d.fy = null;
+    }
+
+
+
+    var evidences = [];
+
+    function change_evidence(order) {
+      var evidence = $('#evidence-'+order).find(":selected").text();
+      evidences.push(evidence);
+
+      $('#evidence-'+order).on('change', function() {
+        evidences[order] = $('#evidence-'+order).find(":selected").text();
+      });
+
+    }
+
+    $('#add-evidence-btn').click(function(){
+      var evidence_list = document.getElementById("evidence-list");
+      var new_evidence = document.createElement('select');
+      new_evidence.setAttribute("class", "form-control");
+      new_evidence.setAttribute("id", "evidence-"+ evidences.length);
+
+      var new_evidence_label = document.createElement('label');
+      new_evidence_label.setAttribute("for", "evidence-"+ evidences.length);
+
+      var label_name = document.createElement("h5");
+      label_name.innerHTML = "Variable:";
+
+      new_evidence_label.appendChild(label_name);
+
+      {% for node in nodes %}
+      var option = document.createElement('option');
+      option.innerHTML = "{{ node.id }}";
+      new_evidence.appendChild(option);
+      {% endfor %}
+
+      var new_evidence_div = document.createElement("div");
+      new_evidence_div.setAttribute("style", "display: inline-block; padding: 0px 50px");
+
+      new_evidence_div.appendChild(new_evidence_label);
+      new_evidence_div.appendChild(new_evidence);
+
+      //======================================================
+
+      evidence_list.appendChild(new_evidence_div);
+      evidence_list.appendChild(document.createElement('br'));
+
+      change_evidence(evidences.length);
+    });
+
+    function find_duplicate_in_array(arra1) {
+      var object = {};
+      var result = [];
+
+      arra1.forEach(function (item) {
+        if(!object[item])
+        object[item] = 0;
+        object[item] += 1;
+      })
+
+      for (var prop in object) {
+        if(object[prop] >= 2) {
+          result.push(prop);
+        }
+      }
+
+      return result;
+
+    }
+
+    $('#dsepbtn').click(function(){
+
+      var target = $('#sel1').find(":selected").text();
+      var source = $('#sel2').find(":selected").text();
+      $("#dsepresult").html("");
+
+      if (target == source){
+        $("<h3 style='color:red;'>Target and source must be different.</h3>").appendTo("#dsepresult");
+        return;
+      }
+      var duplicate_evidence = find_duplicate_in_array(evidences);
+      if (duplicate_evidence.length > 0){
+        $("<h3 style='color:red;'>Error: Duplicate evidences!</h3>").appendTo("#dsepresult");
+        return;
+      }
+
+      $.ajax({
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        url: '/dsepdata/'+source+'/'+target+'/',
+        data: JSON.stringify({evidences: evidences}),
+        success: function(data) {
+          console.log(data);
+          var status = (data == false) ? "dependent" : "independent";
+          var statement;
+          if (evidences.length == 0) {
+            statement = "<h2>"+target+" is always " + status + " on "+source+".</h2>";
+          } else {
+            statement = "<h2>"+target+" is " + status + " on " + source + " given ";
+            for(var i=0; i < evidences.length-1; i++){
+              statement += evidences[i];
+              if (i < evidences.length-2) {
+                statement += ", ";
+              } else {
+                statement += " and "
+              }
+            }
+            statement += evidences[evidences.length-1] + ".</h2>";
+          }
+          $(statement).appendTo("#dsepresult");
+        },
+        dataType: "json"
+      });
+
+    });
   });
-
-  $("#cpttitle").text(variable);
-  $("#myModal").modal("show");
-
-});
-
-$("#myModal").on("hidden.bs.modal", function(){
-    $("#cpttable").html("");
-});
-
-});
-
-function dragstarted(d) {
-  if (!d3.event.active) simulation.alphaTarget(0.3).restart();
-  d.fx = d.x;
-  d.fy = d.y;
-}
-
-function dragged(d) {
-  d.fx = d3.event.x;
-  d.fy = d3.event.y;
-}
-
-function dragended(d) {
-  if (!d3.event.active) simulation.alphaTarget(0);
-  d.fx = null;
-  d.fy = null;
-}
-
-
-
-
-});
 
 </script>
 {% endblock %}

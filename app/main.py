@@ -1,15 +1,15 @@
 from app import app
-import pgmpy
 import pandas as pd
-from pgmpy.models import BayesianModel
-from pgmpy.factors.discrete import TabularCPD
-from pgmpy.inference import VariableElimination
-from pgmpy.independencies import Independencies, IndependenceAssertion
+from ProbabilityModel.models import BayesianModel
+from ProbabilityModel.factors.discrete import TabularCPD
+from ProbabilityModel.inference import VariableElimination
+from ProbabilityModel.independencies import Independencies, IndependenceAssertion
 from flask import jsonify, render_template, request, send_file, redirect, url_for
 from ast import literal_eval
 import json
 import numpy as np
 import os
+import sys
 
 nodes = {}
 nodelist = []
@@ -136,7 +136,10 @@ def construct_network():
 
     independences = network.get_independencies()
     # ind = IndependenceAssertion('I', 'D')
-    # print(ind in independences)
+    # sys.stdout = open("independ.txt", "w")
+    # print(independences)
+    # sys.stdout.close()
+
     assert network.check_model(), "Model CPTs are not consistent."
     infer = VariableElimination(network)
 
@@ -146,7 +149,7 @@ construct_network()
 @app.route('/')
 @app.route('/index/')
 def index():
-    return render_template("index.html")
+    return render_template("index.html", nodes=nodelist)
 
 @app.route('/nodedata/')
 def nodedata():
